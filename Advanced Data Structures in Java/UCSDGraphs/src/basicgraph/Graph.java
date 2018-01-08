@@ -122,7 +122,16 @@ public abstract class Graph {
 	 */
 	public List<Integer> degreeSequence() {
 		// XXX: Implement in part 1 of week 2
-		return null;
+		List<Integer> ans=new ArrayList<Integer>();
+		List<Integer> inEdges;
+		List<Integer> outEdges;
+		for (int i = 0; i < numVertices; i++) {
+			inEdges=getInNeighbors(i);
+			outEdges=getNeighbors(i);
+			ans.add(inEdges.size()+outEdges.size());
+		}
+		Collections.sort(ans, Collections.reverseOrder());
+		return ans;
 	}
 	
 	/**
@@ -262,7 +271,6 @@ public abstract class Graph {
 		// Test your distance2 code here.
 		System.out.println("Testing distance-two methods on sample graphs...");
 		System.out.println("Goal: implement method using two approaches.");
-
 
 		
 	}
