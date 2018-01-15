@@ -8,8 +8,7 @@
 package roadgraph;
 
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 import geography.GeographicPoint;
@@ -24,14 +23,16 @@ import util.GraphLoader;
  */
 public class MapGraph {
 	//TODO: Add your member variables here in WEEK 3
-	
-	
+	private HashMap<GeographicPoint,ArrayList<edgeInfo>> graph=null;
+	private int numEdges; 
 	/** 
 	 * Create a new empty MapGraph 
 	 */
 	public MapGraph()
 	{
 		// TODO: Implement in this constructor in WEEK 3
+		graph= new HashMap< GeographicPoint, ArrayList<edgeInfo> >();
+		numEdges=0;
 	}
 	
 	/**
@@ -41,7 +42,7 @@ public class MapGraph {
 	public int getNumVertices()
 	{
 		//TODO: Implement this method in WEEK 3
-		return 0;
+		return graph.keySet().size();
 	}
 	
 	/**
@@ -51,7 +52,7 @@ public class MapGraph {
 	public Set<GeographicPoint> getVertices()
 	{
 		//TODO: Implement this method in WEEK 3
-		return null;
+		return graph.keySet();
 	}
 	
 	/**
@@ -61,7 +62,7 @@ public class MapGraph {
 	public int getNumEdges()
 	{
 		//TODO: Implement this method in WEEK 3
-		return 0;
+		return numEdges;
 	}
 
 	
@@ -76,6 +77,12 @@ public class MapGraph {
 	public boolean addVertex(GeographicPoint location)
 	{
 		// TODO: Implement this method in WEEK 3
+		if(!graph.containsKey(location))
+		{
+			ArrayList<edgeInfo> neighbours =new ArrayList<edgeInfo>();
+			graph.put(location,neighbours);
+			return true;
+		}
 		return false;
 	}
 	
@@ -95,7 +102,19 @@ public class MapGraph {
 			String roadType, double length) throws IllegalArgumentException {
 
 		//TODO: Implement this method in WEEK 3
-		
+		if(!graph.containsKey(from)||!graph.containsKey(to))
+			throw new IllegalArgumentException("From Or To GeGeographicPoints equal null");
+		if(roadName.equals(null)||roadType.equals(null)||length==0)
+			throw new IllegalArgumentException("road name Or road type equal null");
+		if(length==0)
+			throw new IllegalArgumentException("length equals zero");
+		edgeInfo edge=new edgeInfo();
+		edge.setTo(to);
+		edge.setRoadName(roadName);
+		edge.setRoadType(roadType);
+		edge.setLength(length);
+		graph.get(from).add(edge);
+		numEdges++;
 	}
 	
 
@@ -127,11 +146,51 @@ public class MapGraph {
 		
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
-
-		return null;
+		if(start.equals(null)||goal.equals(null)||
+				!graph.containsKey(start)||!graph.containsKey(goal))return null;
+		Queue<GeographicPoint> queue= new LinkedList<GeographicPoint>();
+		List<GeographicPoint> visited=new ArrayList<GeographicPoint>();
+		HashMap<GeographicPoint,GeographicPoint> parents=new HashMap<GeographicPoint,GeographicPoint>();
+		Boolean found=false;
+		queue.add(start);
+		visited.add(start);
+		while(!queue.isEmpty())
+		{
+			GeographicPoint currPoint= queue.remove();
+			nodeSearched.accept(currPoint);
+			
+				if(currPoint.equals(goal))
+				{
+					found=true;
+					break;
+				}
+				for (edgeInfo next : graph.get(currPoint)) {
+					if(!visited.contains(next.getTo()))
+					{
+						queue.add(next.getTo());
+						parents.put(next.getTo(), currPoint);
+						visited.add(next.getTo());
+					}
+				}
+			
+		}
+		if(!found)return null;
+		
+		return constructPath(start, goal,parents);
 	}
-	
-
+	private static List<GeographicPoint> constructPath(GeographicPoint start, 
+		     GeographicPoint goal,HashMap<GeographicPoint,GeographicPoint> parents)
+	{
+		LinkedList<GeographicPoint> path=new LinkedList<GeographicPoint>();
+		path.addFirst(goal);
+		GeographicPoint position=goal;
+		while(position!=start)
+		{
+			path.addFirst(parents.get(position));
+			position=parents.get(position);
+		}
+		return path;
+	}
 	/** Find the path from start to goal using Dijkstra's algorithm
 	 * 
 	 * @param start The starting location
