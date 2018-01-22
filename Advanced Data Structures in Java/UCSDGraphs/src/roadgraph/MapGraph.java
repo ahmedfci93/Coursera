@@ -11,6 +11,8 @@ package roadgraph;
 import java.util.*;
 import java.util.function.Consumer;
 
+import javax.transaction.xa.Xid;
+
 import geography.GeographicPoint;
 import util.GraphLoader;
 
@@ -23,15 +25,17 @@ import util.GraphLoader;
  */
 public class MapGraph {
 	//TODO: Add your member variables here in WEEK 3
-	private HashMap<GeographicPoint,ArrayList<edgeInfo>> graph=null;
-	private int numEdges; 
+	private HashMap<GeographicPoint,ArrayList<edgeInfo>> graph=null;// graph has its vertices and information of each edge  which is out-going edge from vertices 
+	private int numEdges;//counter of edges
 	/** 
 	 * Create a new empty MapGraph 
 	 */
 	public MapGraph()
 	{
 		// TODO: Implement in this constructor in WEEK 3
+		// creation of graph
 		graph= new HashMap< GeographicPoint, ArrayList<edgeInfo> >();
+		// initialization of edge number
 		numEdges=0;
 	}
 	
@@ -42,6 +46,7 @@ public class MapGraph {
 	public int getNumVertices()
 	{
 		//TODO: Implement this method in WEEK 3
+		//number of vertices in graph
 		return graph.keySet().size();
 	}
 	
@@ -52,6 +57,7 @@ public class MapGraph {
 	public Set<GeographicPoint> getVertices()
 	{
 		//TODO: Implement this method in WEEK 3
+		//all vertices in graph
 		return graph.keySet();
 	}
 	
@@ -77,7 +83,7 @@ public class MapGraph {
 	public boolean addVertex(GeographicPoint location)
 	{
 		// TODO: Implement this method in WEEK 3
-		if(!graph.containsKey(location))
+		if(!graph.containsKey(location))//check if vertex added before.
 		{
 			ArrayList<edgeInfo> neighbours =new ArrayList<edgeInfo>();
 			graph.put(location,neighbours);
@@ -102,22 +108,33 @@ public class MapGraph {
 			String roadType, double length) throws IllegalArgumentException {
 
 		//TODO: Implement this method in WEEK 3
+		//gatesCondition to check all validations are correct
+		gateConditions(from, to, roadName, roadType, length);
+		/*
+		 * edgeInfo object has all information of edge out-going from GeographicPoint
+		 * like destination Geographic point, roadName, roadType, Length.
+		 * */
+		edgeInfo edge=new edgeInfo();
+		edge.setTo(to);
+		edge.setRoadName(roadName);
+		edge.setRoadType(roadType);
+		edge.setLength(length);
+		// add to graph a vertex and its information of out-going edge from it
+		graph.get(from).add(edge);
+		numEdges++;//count edge
+	}
+	
+	public void gateConditions(GeographicPoint from, GeographicPoint to, String roadName,
+			String roadType, double length)
+	{
 		if(!graph.containsKey(from)||!graph.containsKey(to))
 			throw new IllegalArgumentException("From Or To GeGeographicPoints equal null");
 		if(roadName.equals(null)||roadType.equals(null)||length==0)
 			throw new IllegalArgumentException("road name Or road type equal null");
 		if(length==0)
 			throw new IllegalArgumentException("length equals zero");
-		edgeInfo edge=new edgeInfo();
-		edge.setTo(to);
-		edge.setRoadName(roadName);
-		edge.setRoadType(roadType);
-		edge.setLength(length);
-		graph.get(from).add(edge);
-		numEdges++;
 	}
 	
-
 	/** Find the path from start to goal using breadth first search
 	 * 
 	 * @param start The starting location
@@ -172,13 +189,12 @@ public class MapGraph {
 						visited.add(next.getTo());
 					}
 				}
-			
 		}
 		if(!found)return null;
 		
 		return constructPath(start, goal,parents);
 	}
-	private static List<GeographicPoint> constructPath(GeographicPoint start, 
+	private List<GeographicPoint> constructPath(GeographicPoint start, 
 		     GeographicPoint goal,HashMap<GeographicPoint,GeographicPoint> parents)
 	{
 		LinkedList<GeographicPoint> path=new LinkedList<GeographicPoint>();
@@ -217,13 +233,52 @@ public class MapGraph {
 										  GeographicPoint goal, Consumer<GeographicPoint> nodeSearched)
 	{
 		// TODO: Implement this method in WEEK 4
-
-		// Hook for visualization.  See writeup.
-		//nodeSearched.accept(next.getLocation());
-		
-		return null;
+		if(start.equals(null)||goal.equals(null)||
+				!graph.containsKey(start)||!graph.containsKey(goal))return null;
+		PriorityQueue<weightedNode> pQueue= new PriorityQueue<>();
+		List<GeographicPoint> visited=new ArrayList<GeographicPoint>();
+		HashMap<GeographicPoint,GeographicPoint> parents=new HashMap<GeographicPoint,GeographicPoint>();
+		HashMap<GeographicPoint,Double> distances=new HashMap<>();
+		Boolean found=false;
+		weightedNode sNode=new weightedNode(start);
+		sNode.setWeight(0.0);
+		pQueue.add(sNode);
+		distances.put(start, 0.0);
+		while(!pQueue.isEmpty())
+		{
+			// Hook for visualization.  See writeup.
+			//nodeSearched.accept(next.getLocation());
+			weightedNode curr=pQueue.remove();
+			if(!visited.contains(curr.getNode()))
+			{
+				visited.add(curr.getNode());
+				nodeSearched.accept(curr.getNode());
+				if(curr.getNode().equals(goal))
+				{
+					found=true;
+					break;
+				}
+				ArrayList<edgeInfo> neighbours = graph.get(curr.getNode());
+				for (edgeInfo next : neighbours) {
+					if(!visited.contains(next.getTo()))
+					{
+						if((!distances.containsKey(next.getTo()))||
+								(distances.containsKey(next.getTo())&&
+								next.getLength()+curr.getWeight()<distances.get(next.getTo()) ))
+						{
+							weightedNode newNode=new weightedNode(next.getTo());
+							newNode.setWeight(next.getLength()+curr.getWeight());
+							distances.put(next.getTo(),next.getLength()+curr.getWeight() );
+							pQueue.add(newNode);
+							parents.put(next.getTo(), curr.getNode());
+						}	
+					}
+				}	
+			}
+		}
+		if(!found)return null;
+		return constructPath(start, goal,parents) ;
 	}
-
 	/** Find the path from start to goal using A-Star search
 	 * 
 	 * @param start The starting location
@@ -249,11 +304,54 @@ public class MapGraph {
 											 GeographicPoint goal, Consumer<GeographicPoint> nodeSearched)
 	{
 		// TODO: Implement this method in WEEK 4
-		
+		if(start.equals(null)||goal.equals(null)||
+				!graph.containsKey(start)||!graph.containsKey(goal))return null;
+		PriorityQueue<weightedNode> pQueue= new PriorityQueue<>();
+		List<GeographicPoint> visited=new ArrayList<GeographicPoint>();
+		HashMap<GeographicPoint,GeographicPoint> parents=new HashMap<GeographicPoint,GeographicPoint>();
+		HashMap<GeographicPoint,Double> distances=new HashMap<>();
+		Boolean found=false;
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
-		
-		return null;
+		double fN= start.distance(goal)+0.0;
+		weightedNode sn=new weightedNode(start);
+		sn.setWeight(fN);
+		pQueue.add(sn);
+		while(!pQueue.isEmpty())
+		{
+			weightedNode curr=pQueue.remove();
+			if(!visited.contains(curr.getNode()))
+			{
+				visited.add(curr.getNode());
+				nodeSearched.accept(curr.getNode());
+				if(curr.getNode().equals(goal))
+				{
+					found=true;
+					break;
+				}
+				ArrayList<edgeInfo> neighbours= graph.get(curr.getNode());
+				for (edgeInfo next : neighbours) {
+					if(!visited.contains(next.getTo()))
+					{
+						fN= start.distance(next.getTo())+goal.distance(next.getTo());
+						if((!distances.containsKey(next.getTo()))||
+								(distances.containsKey(next.getTo())&&
+								fN<distances.get(next.getTo()) ))
+						{
+							weightedNode newNode=new weightedNode(next.getTo());
+							newNode.setWeight(fN);
+							distances.put(next.getTo(),fN);
+							pQueue.add(newNode);
+							parents.put(next.getTo(), curr.getNode());
+						}	
+					}
+				}
+			}
+			
+		}
+
+		if(!found)return null;
+		return constructPath(start, goal,parents) ;
 	}
 
 	
@@ -265,9 +363,7 @@ public class MapGraph {
 		System.out.print("DONE. \nLoading the map...");
 		GraphLoader.loadRoadMap("data/testdata/simpletest.map", firstMap);
 		System.out.println("DONE.");
-		
 		// You can use this method for testing.  
-		
 		
 		/* Here are some test cases you should try before you attempt 
 		 * the Week 3 End of Week Quiz, EVEN IF you score 100% on the 
@@ -321,5 +417,4 @@ public class MapGraph {
 		*/
 		
 	}
-	
 }

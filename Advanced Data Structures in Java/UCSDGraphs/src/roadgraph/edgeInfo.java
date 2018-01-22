@@ -1,13 +1,15 @@
 package roadgraph;
 
 import geography.GeographicPoint;
-
+/*
+ * edgeInfo class has all information of edge out-going from GeographicPoint
+ * like destination Geographic point, roadName, roadType, Length.
+ * */
 public class edgeInfo {
-	private GeographicPoint to;
-	private String roadName;
-	private String roadType;
-	private double length;
-	
+	private GeographicPoint to;//Destination
+	private String roadName;//road name of edge.
+	private String roadType;//road type of edge.
+	private double length;//length of edge.
 	
 	public GeographicPoint getTo() {
 		return to;
