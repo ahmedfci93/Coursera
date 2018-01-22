@@ -241,6 +241,7 @@ public class MapGraph {
 		HashMap<GeographicPoint,Double> distances=new HashMap<>();
 		Boolean found=false;
 		weightedNode sNode=new weightedNode(start);
+		int cnt=0;
 		sNode.setWeight(0.0);
 		pQueue.add(sNode);
 		distances.put(start, 0.0);
@@ -249,12 +250,14 @@ public class MapGraph {
 			// Hook for visualization.  See writeup.
 			//nodeSearched.accept(next.getLocation());
 			weightedNode curr=pQueue.remove();
+			cnt++;
 			if(!visited.contains(curr.getNode()))
 			{
 				visited.add(curr.getNode());
 				nodeSearched.accept(curr.getNode());
 				if(curr.getNode().equals(goal))
 				{
+					System.out.println("visited node in Dijkastra algorithm "+cnt);
 					found=true;
 					break;
 				}
@@ -306,6 +309,7 @@ public class MapGraph {
 		// TODO: Implement this method in WEEK 4
 		if(start.equals(null)||goal.equals(null)||
 				!graph.containsKey(start)||!graph.containsKey(goal))return null;
+		int cnt=0;
 		PriorityQueue<weightedNode> pQueue= new PriorityQueue<>();
 		List<GeographicPoint> visited=new ArrayList<GeographicPoint>();
 		HashMap<GeographicPoint,GeographicPoint> parents=new HashMap<GeographicPoint,GeographicPoint>();
@@ -313,19 +317,23 @@ public class MapGraph {
 		Boolean found=false;
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
-		double fN= start.distance(goal)+0.0;
+		double fN= 0.0;
 		weightedNode sn=new weightedNode(start);
 		sn.setWeight(fN);
 		pQueue.add(sn);
+		distances.put(start, fN);
 		while(!pQueue.isEmpty())
 		{
 			weightedNode curr=pQueue.remove();
+			cnt++;
 			if(!visited.contains(curr.getNode()))
 			{
 				visited.add(curr.getNode());
+				
 				nodeSearched.accept(curr.getNode());
 				if(curr.getNode().equals(goal))
-				{
+				{	
+					System.out.println("visited node in A* algorithm "+cnt);
 					found=true;
 					break;
 				}
@@ -333,7 +341,7 @@ public class MapGraph {
 				for (edgeInfo next : neighbours) {
 					if(!visited.contains(next.getTo()))
 					{
-						fN= start.distance(next.getTo())+goal.distance(next.getTo());
+						fN= curr.getNode().distance(next.getTo())+goal.distance(next.getTo());
 						if((!distances.containsKey(next.getTo()))||
 								(distances.containsKey(next.getTo())&&
 								fN<distances.get(next.getTo()) ))
@@ -363,6 +371,34 @@ public class MapGraph {
 		System.out.print("DONE. \nLoading the map...");
 		GraphLoader.loadRoadMap("data/testdata/simpletest.map", firstMap);
 		System.out.println("DONE.");
+	    MapGraph simpleTestMap = new MapGraph();
+			GraphLoader.loadRoadMap("data/testdata/simpletest.map", simpleTestMap);
+			
+			GeographicPoint testStart = new GeographicPoint(1.0, 1.0);
+			GeographicPoint testEnd = new GeographicPoint(8.0, -1.0);
+			
+			System.out.println("Test 1 using simpletest: Dijkstra should be 9 and AStar should be 5");
+			List<GeographicPoint> testroute = simpleTestMap.dijkstra(testStart,testEnd);
+			List<GeographicPoint> testroute2 = simpleTestMap.aStarSearch(testStart,testEnd);
+			
+			
+			MapGraph testMap = new MapGraph();
+			GraphLoader.loadRoadMap("data/maps/utc.map", testMap);
+			
+			// A very simple test using real data
+			testStart = new GeographicPoint(32.869423, -117.220917);
+			testEnd = new GeographicPoint(32.869255, -117.216927);
+			System.out.println("Test 2 using utc: Dijkstra should be 13 and AStar should be 5");
+			testroute = testMap.dijkstra(testStart,testEnd);
+			testroute2 = testMap.aStarSearch(testStart,testEnd);
+			
+			
+			// A slightly more complex test using real data
+			testStart = new GeographicPoint(32.8674388, -117.2190213);
+			testEnd = new GeographicPoint(32.8697828, -117.2244506);
+			System.out.println("Test 3 using utc: Dijkstra should be 37 and AStar should be 10");
+			testroute = testMap.dijkstra(testStart,testEnd);
+			testroute2 = testMap.aStarSearch(testStart,testEnd);
 		// You can use this method for testing.  
 		
 		/* Here are some test cases you should try before you attempt 
